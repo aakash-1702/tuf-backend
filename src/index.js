@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import userRouter from "../routes/user.routes.js";
 import cookieParser from "cookie-parser";
+import adminRouter from "../routes/admin.routes.js";
 dotenv.config({
     path : "src/index.js"
 });
@@ -21,6 +22,7 @@ app.use(cookieParser())
 app.use(express.json());
 
 app.use('/api/v1/user',userRouter);
+app.use('/api/v1/admin',adminRouter);
 
 
 app.listen(PORT , () => {
