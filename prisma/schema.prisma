@@ -29,3 +29,25 @@ model User{
   createdAt DateTime @default(now())
   
 }
+
+enum Difficulty{
+  easy
+  medium
+  hard
+}
+
+
+model Problem{
+  id String @id @default(cuid())
+  title String
+  slug String @unique
+  description String?
+  tags String[]
+  companies String[]
+  difficulty Difficulty
+  isPublic Boolean @default(true)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  link String
+}
