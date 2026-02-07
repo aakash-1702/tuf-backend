@@ -6,7 +6,7 @@ import * as z from "zod";
 import ApiResponse from "../utils/ApiResponse.js";
 import { generateHashedPassword , comparePassword } from "../utils/password.utils.js";
 import { generateAccessToken , generateRefreshToken} from "../utils/tokens.util.js";
-import { ref } from "node:process";
+
 const signUpController = async(req,res) => {
     const {name , password ,email} = req.body;
 
@@ -42,7 +42,7 @@ const signUpController = async(req,res) => {
         
         // hashing password before storing in db        
         const hashedPassword = await generateHashedPassword(password);
-        if(!hashedPassword) return res.status(500).json({msg : "Unable to process password"});    
+        if(!hashedPassword) return res.status(500).json(new ApiResponse(500,"Internal Server Error: password hash error","Unable to signup"));    
        
         
 
@@ -61,7 +61,7 @@ const signUpController = async(req,res) => {
         }
     });
 
-    if(!newUser) return res.status(400).json({msg : "Unable to signup at the moment"});
+    if(!newUser) return res.status(400).json(new ApiResponse(400,"Unable to create user","Unable to signup"));
 
     return res.status(201).json({
         newUser
@@ -69,7 +69,7 @@ const signUpController = async(req,res) => {
         
     } catch (error) {
         console.log("error",error);
-        return res.status(400).json({"err" : "Unable to signup"});        
+        return res.status(500).json(new ApiResponse(500,"Internal Server Error","Unable to signup"));        
     }
     
 }
@@ -103,7 +103,7 @@ const loginController = async (req,res) => {
         const isPasswordValid = await comparePassword(password,existingUser.password);
 
         if(!isPasswordValid){
-            return res.status(401).json(new ApiResponse(400,"Invalid Credentials","Unable to login"));
+            return res.status(401).json(new ApiResponse(401,"Invalid Credentials","Unable to login"));
         }
 
 
@@ -147,14 +147,16 @@ const loginController = async (req,res) => {
             httpOnly:true,
             secure : process.env.NODE_ENV === "production",
             sameSite : "strict",
-            maxAge : 1*24 * 60 * 1000 // 1 day
+            maxAge : 15 * 60 * 1000 // 15 minutes
         }
 
         )
 
+        const userRole = existingUser.role
+
         return res.status(200).json(
-            new ApiResponse(200,"Login Successful",
-                accessToken
+            new ApiResponse(200,userRole,
+                `Logged In Successfully , enjoy solving problems`
             )            
         );
     } catch (error) {
@@ -165,5 +167,16 @@ const loginController = async (req,res) => {
 
 
 
+const provideMyRole = async(req,res) => {
+    if(!req.user){
+        return res.status(401).json(new ApiResponse(401,"Unauthorised Access","user not found in req"));
+    }
+    const user = req.user;
 
-export {signUpController, loginController};
+    return res.status(200).json(new ApiResponse(200,user.role,`user role has been fetched successfully`));
+}
+
+
+
+
+export {signUpController, loginController , provideMyRole};
