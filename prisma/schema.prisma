@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -18,36 +12,90 @@ enum UserRole {
   USER
 }
 
-model User{
-  id  Int @id @default(autoincrement())
-  name String
-  email String @unique
-  password String
-  role UserRole @default(USER)
-  refreshToken String ?
-  profilePhoto String ?
-  createdAt DateTime @default(now())
-  
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  password     String
+  role         UserRole @default(USER)
+  refreshToken String?
+  profilePhoto String?
+  createdAt    DateTime @default(now())
 }
 
-enum Difficulty{
+/* ================= PROBLEM ================= */
+
+enum Difficulty {
   easy
   medium
   hard
 }
 
-
-model Problem{
-  id String @id @default(cuid())
-  title String
-  slug String @unique
+model Problem {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
   description String?
-  tags String[]
-  companies String[]
-  difficulty Difficulty
-  isPublic Boolean @default(true)
-  isActive Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  link String
+  tags        String[]
+  companies   String[]
+  difficulty  Difficulty
+  isPublic    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  link        String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // relation
+  sectionProblems SectionProblem[]
+}
+
+/* ================= SHEET ================= */
+
+model Sheet {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  slug        String   @unique
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // relation
+  sections    SheetSection[]
+}
+
+/* ================= SECTION ================= */
+
+model SheetSection {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int
+
+  sheetId     String
+  sheet       Sheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  // relation
+  problems    SectionProblem[]
+
+  @@index([sheetId, order])
+}
+
+/* ================= SECTION PROBLEM ================= */
+
+model SectionProblem {
+  id         String @id @default(cuid())
+
+  sectionId  String
+  problemId  String
+
+  order      Int
+  note       String?
+
+  section    SheetSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  problem    Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, problemId])
+  @@index([sectionId, order])
 }
