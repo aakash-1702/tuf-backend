@@ -126,17 +126,43 @@ const updateProblemController = asyncHandler(async (req, res) => {
 
 /* -------------------- GET ACTIVE PROBLEMS (PUBLIC) -------------------- */
 const getAllProblemsController = asyncHandler(async (req, res) => {
-  const problems = await prisma.problem.findMany({
+  const page = parseInt(req.params.page) || 1;
+  const problemsPerPage = parseInt(process.env.PROBLEMS_PER_PAGE) || 10;
+
+  // 1️⃣ Get total count
+  const totalProblems = await prisma.problem.count({
     where: { isActive: true },
   });
 
-  if (problems.length === 0) {
-    return res.status(404).json(new ApiResponse(404, "No problems found"));
+  const totalPages = Math.ceil(totalProblems / problemsPerPage);
+
+  // If page exceeds totalPages
+  if (page > totalPages && totalProblems !== 0) {
+    return res.status(404).json(new ApiResponse(404, "Page not found"));
   }
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, problems, "Problems fetched successfully"));
+  // 2️⃣ Get paginated data
+  const problems = await prisma.problem.findMany({
+    skip: (page - 1) * problemsPerPage,
+    take: problemsPerPage,
+    where: { isActive: true },
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        problems,
+        pagination: {
+          totalProblems,
+          totalPages,
+          currentPage: page,
+          problemsPerPage,
+        },
+      },
+      "Problems fetched successfully",
+    ),
+  );
 });
 
 /* -------------------- GET INACTIVE PROBLEMS (ADMIN) -------------------- */
@@ -246,6 +272,8 @@ const createSheetSection = asyncHandler(async (req, res) => {
     },
   });
 
+  console.log("Last order of the sections is ", lastOrder);
+
   // adding 1 to last order
   const curOrder = lastOrder ? lastOrder.order + 1 : 1;
 
@@ -258,7 +286,7 @@ const createSheetSection = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!newSection) {
+  if (!newSectionInSheet) {
     return res
       .status(500)
       .json(
@@ -280,42 +308,43 @@ const createSheetSection = asyncHandler(async (req, res) => {
       ),
     );
 
-  const newSection = await prisma.sheetSection.create({});
   // problems here would be an array having slugs of the problems that are supposed to be added in the sheet
 });
 
 /*-----------------Adding problems to the section in the sheet-------------------*/
 const addProblemsToSection = asyncHandler(async (req, res) => {
   const { sectionId } = req.params;
-  const { problems } = req.body;
+  const { problems: problemIds } = req.body;
 
-  if (!Array.isArray(problems) || problems.length === 0)
+  // ✅ 1. Validate input
+  if (!Array.isArray(problemIds) || problemIds.length === 0) {
     return res
       .status(400)
-      .json(new ApiResponse(400, "Problems array required"));
+      .json(new ApiResponse(400, null, "Problems array required"));
+  }
 
-  const result = await prisma.$transaction(async (tx) => {
-    /* 1️⃣ Verify section */
+  const count = await prisma.$transaction(async (tx) => {
+    // ✅ 2. Check section exists
     const section = await tx.sheetSection.findUnique({
       where: { id: sectionId },
       select: { id: true },
     });
 
-    if (!section) {
-      return res.status(404).json(new ApiResponse(404, null,"Section not found",));
-    }
+    if (!section) throw new Error("Section not found");
 
-    /* 2️⃣ Fetch problems */
+    // ✅ 3. Fetch problems
     const problemRecords = await tx.problem.findMany({
-      where: { slug: { in: problems }, isActive: true },
+      where: {
+        id: { in: problemIds },
+      },
       select: { id: true },
     });
 
-    if (problemRecords.length === 0){
-      return res.status(404).json(new ApiResponse(404,null, "No valid problems found to add"));
+    if (problemRecords.length !== problemIds.length) {
+      throw new Error("Some problem IDs are invalid");
     }
 
-    /* 3️⃣ Get last order */
+    // ✅ 4. Get last order
     const last = await tx.sectionProblem.findFirst({
       where: { sectionId },
       orderBy: { order: "desc" },
@@ -324,7 +353,7 @@ const addProblemsToSection = asyncHandler(async (req, res) => {
 
     let order = last ? last.order + 1 : 1;
 
-    /* 4️⃣ Bulk insert */
+    // ✅ 5. Create mappings
     const mappings = problemRecords.map((p) => ({
       sectionId,
       problemId: p.id,
@@ -341,12 +370,67 @@ const addProblemsToSection = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Problems added to section"));
+    .json(new ApiResponse(200, count, "Problems added successfully"));
 });
 
+/*---------------------Get all the sheets----------------------*/
+const getAllSheets = asyncHandler(async (req, res) => {
+  try {
+    const sheets = await prisma.sheet.findMany({});
+    if (!sheets || sheets.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No sheets found"));
+    }
 
+    return res
+      .status(200)
+      .json(new ApiResponse(200, sheets, "Sheets fetched successfully"));
+  } catch (error) {
+    console.log("Error occured while fetching sheets", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Internal Server Error"));
+  }
+});
 
+const getSheetData = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
 
+  console.log(slug);
+  if (!slug)
+    return res.status(404).json(new ApiResponse(404, null, "Slug not found"));
+
+  const sheetData = await prisma.sheet.findFirst({
+    where: { slug },
+    include: {
+      sections: {
+        orderBy: { order: "asc" },
+        include: {
+          problems: {
+            orderBy: { order: "asc" },
+            include: {
+              problem: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!sheetData)
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(500, null, "Unable to fetch sheet data at the moement"),
+      );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, sheetData, "Fetched sheet data successfully"));
+
+  // return res.status(200).json(slug);
+});
 
 /* ------------------------------------------------------------------------ */
 
@@ -359,5 +443,7 @@ export {
   getInactiveProblemsController,
   createSheetController,
   createSheetSection,
-  addProblemsToSection  
+  addProblemsToSection,
+  getAllSheets,
+  getSheetData,
 };
