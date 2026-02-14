@@ -10,8 +10,19 @@ import {
   getInactiveProblemsController,
   createSheetController,
   createSheetSection,
-  addProblemsToSection
+  addProblemsToSection,
+  getAllSheets,
+  getSheetData
 } from "../controllers/admin.controller.js";
+import { is } from "zod/locales";
+
+/* verifying if it is admin or not*/
+adminRouter.get("/admin/dashboard", isAuthenticated, isAdmin, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to the admin dashboard",
+  });
+})
 
 /*---------Routes for problems*/
 adminRouter.post(
@@ -27,7 +38,7 @@ adminRouter.delete(
   deleteProblemController,
 );
 adminRouter.get(
-  "/get-all-problems",
+  "/get-all-problems/:page",
   isAuthenticated,
   isAdmin,
   getAllProblemsController,
@@ -47,7 +58,7 @@ adminRouter.put(
 
 /*---------Routes for sheets */
 adminRouter.post(
-  "/sheet/:sheetSlug/create-section",
+  "/create-sheet",
   isAuthenticated,
   isAdmin,
   createSheetController,
@@ -64,4 +75,8 @@ adminRouter.post(
   isAdmin,
   addProblemsToSection,
 );
+
+adminRouter.get("/sheet/:slug",isAuthenticated,isAdmin,getSheetData);
+
+adminRouter.get("/get-sheets",isAuthenticated , isAdmin,getAllSheets);
 export default adminRouter;
