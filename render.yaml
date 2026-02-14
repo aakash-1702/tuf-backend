@@ -1,16 +1,15 @@
 # Render Blueprint – use repo root so controllers, routes, lib, generated, etc. are deployed
 #
-# CRITICAL: In Render Dashboard → Service → Settings → Root Directory
-#   → Leave ROOT DIRECTORY BLANK (empty). Do NOT set it to "src".
-#   If Root Directory is "src", you get: Cannot find module '.../src/src/utils/...' (double src).
+# If you get ".../src/src/..." (double src): Render is running start from inside src/.
+# Fix: In Dashboard set Start Command to:  npm run start:render
+# That runs from repo root so "node src/index.js" resolves correctly.
 
 services:
   - type: web
     name: take-u-forward-backend
     runtime: node
-    # Root Directory must be blank so "node src/index.js" runs from repo root (not from inside src/).
     buildCommand: npm install && npx prisma generate
-    startCommand: npm start
+    startCommand: npm run start:render
     # If you get "Cannot find module" or .ts errors, try: node --experimental-strip-types src/index.js (Node 22+)
     envVars:
       - key: NODE_ENV

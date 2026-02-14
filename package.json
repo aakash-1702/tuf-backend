@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "build": "prisma generate"
+    "build": "prisma generate",
+    "start:render": "cd .. && node src/index.js"
   },
   "engines": {
     "node": ">=20"
