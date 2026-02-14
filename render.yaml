@@ -1,0 +1,15 @@
+# Render Blueprint – use repo root so controllers, routes, lib, generated, etc. are deployed
+# Do NOT set Root Directory to "src" in the dashboard – that would deploy only src/ and break imports.
+
+services:
+  - type: web
+    name: take-u-forward-backend
+    runtime: node
+    # Root Directory: do not set (repo root). If you set it to "src", sibling folders won't be deployed.
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    # If you get "Cannot find module" or .ts errors, try: node --experimental-strip-types src/index.js (Node 22+)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Add DATABASE_URL, ACESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, etc. in Render Dashboard → Environment
