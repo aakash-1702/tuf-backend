@@ -1,11 +1,14 @@
 # Render Blueprint – use repo root so controllers, routes, lib, generated, etc. are deployed
-# Do NOT set Root Directory to "src" in the dashboard – that would deploy only src/ and break imports.
+#
+# CRITICAL: In Render Dashboard → Service → Settings → Root Directory
+#   → Leave ROOT DIRECTORY BLANK (empty). Do NOT set it to "src".
+#   If Root Directory is "src", you get: Cannot find module '.../src/src/utils/...' (double src).
 
 services:
   - type: web
     name: take-u-forward-backend
     runtime: node
-    # Root Directory: do not set (repo root). If you set it to "src", sibling folders won't be deployed.
+    # Root Directory must be blank so "node src/index.js" runs from repo root (not from inside src/).
     buildCommand: npm install && npx prisma generate
     startCommand: npm start
     # If you get "Cannot find module" or .ts errors, try: node --experimental-strip-types src/index.js (Node 22+)

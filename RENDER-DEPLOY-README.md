@@ -1,5 +1,13 @@
 # What Was Wrong and What We Fixed (Simple Explanation)
 
+## If you see: Cannot find module '.../src/src/utils/...' (double "src")
+
+**Cause:** In Render, the service **Root Directory** is set to `src`. So when `npm start` runs `node src/index.js`, it runs from inside `src/` and looks for `src/src/...`.
+
+**Fix:** In **Render Dashboard** → your service → **Settings** → **Root Directory**: **clear it** (leave it empty) so the repo root is used. Then save and redeploy.
+
+---
+
 ## The problem in one sentence
 
 **Render was only using your `src` folder**, so it never saw `controllers`, `routes`, `lib`, `generated`, etc. When your app ran, it tried to load those folders and they weren’t there → errors.
