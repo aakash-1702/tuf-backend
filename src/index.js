@@ -2,9 +2,9 @@ import express from "express";
 const app = express();
 import dotenv from "dotenv";
 import cors from "cors";
-import userRouter from "../routes/user.routes.js";
+import userRouter from "./routes/user.routes.js";
 import cookieParser from "cookie-parser";
-import adminRouter from "../routes/admin.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 dotenv.config(); // loads .env from project root; on Render use Environment variables
 app.use(cors({
     origin: "http://localhost:3000", // your frontend URL
