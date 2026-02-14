@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js",
+    "start": "node -e \"const {execSync}=require('child_process');const path=require('path');const fs=require('fs');let d=process.cwd(); while(!fs.existsSync(path.join(d,'package.json'))) {const p=path.dirname(d); if(p===d) break; d=p;} execSync('node src/index.js', {cwd:d, stdio:'inherit'})\"",
     "build": "prisma generate",
     "start:render": "cd .. && node src/index.js"
   },
